@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-FileCopyrightText: 2023-2025 Paranoid Android
+     SPDX-FileCopyrightText: 2026 The LineageOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- App Name -->
+    <string name="app_name">eSIM Switcher</string>
+
+    <!-- ESIM -->
+    <string name="esim_title">eSIM</string>
+    <string name="esim_enable_name">Bật eSIM</string>
+    <string name="esim_summary_enabled">Đã bật</string>
+    <string name="esim_summary_disabled">Đã tắt</string>
+    <string name="esim_warning_title">eSIM đang sử dụng</string>
+    <string name="esim_warning_message">Vui lòng tắt hoặc xóa hồ sơ eSIM hiện tại của bạn trước khi tiến hành</string>
+    <string name="esim_footer_note">Kích hoạt eSIM sẽ vô hiệu hóa khe SIM vật lý thứ hai</string>
+</resources>
