@@ -45,6 +45,7 @@
 #include "effect.h"
 
 using aidl::android::hardware::vibrator::Effect;
+using aidl::android::hardware::vibrator::CompositePrimitive;
 
 namespace {
 
@@ -53,6 +54,83 @@ const uint16_t kPrimitiveMask = (1 << 15);
 
 std::unordered_map<uint32_t, effect_stream> sEffectStreams;
 std::unordered_map<uint32_t, std::vector<int8_t>> sEffectFifoData;
+
+// Hardcoded fallback primitive waveforms (170 Hz sine, 10 samples at 8kHz)
+// Used when primitive_effect_*.bin files are missing from /vendor/etc/vibrator/
+
+static const int8_t kFallbackNoop[] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+static const int8_t kFallbackClick[] = {
+    17,  34,  50,  65,  79,  92,  103, 112, 119, 124,
+    127, 127, 126, 122, 116, 108, 98,  86,  73,  58,
+    42,  26,  9,   -8,  -25, -41, -57, -72, -85, -97,
+    -108, -116, -122, -126, -127, -127, -125, -120,
+    -113, -104, -93,  -80, -66, -51, -35, -18, -1,
+};
+
+static const int8_t kFallbackThud[] = {
+    17,  34,  50,  65,  79,  92,  103, 112, 119, 124,
+    127, 127, 126, 122, 116, 108, 98,  86,  73,  58,
+    42,  26,  9,   -8,  -25, -41, -57, -72, -85, -97,
+    -108, -116, -122, -126, -127, -127, -125, -120,
+    -113, -104, -93,  -80, -66, -51, -35, -18, -1,
+};
+
+static const int8_t kFallbackSpin[] = {
+    17,  34,  50,  65,  79,  92,  103, 112, 119, 124,
+    127, 127, 126, 122, 116, 108, 98,  86,  73,  58,
+    42,  26,  9,   -8,  -25, -41, -57, -72, -85, -97,
+    -108, -116, -122, -126, -127, -127, -125, -120,
+    -113, -104, -93,  -80, -66, -51, -35, -18, -1,
+};
+
+static const int8_t kFallbackQuickRise[] = {
+    0,  12,  25,  37,  50,  62,  75,  87,  100, 112,
+};
+
+static const int8_t kFallbackSlowRise[] = {
+    0,  6,   12,  18,  25,  31,  37,  43,  50,  56,
+};
+
+static const int8_t kFallbackQuickFall[] = {
+    112, 100, 87,  75,  62,  50,  37,  25,  12,  0,
+};
+
+static const int8_t kFallbackLightTick[] = {
+    17,  34,  50,  65,  79,  92,  103, 112, 119, 124,
+    127, 127, 126, 122, 116, 108, 98,  86,  73,  58,
+    42,  26,  9,   -8,  -25, -41, -57, -72, -85, -97,
+    -108, -116, -122, -126, -127, -127, -125, -120,
+    -113, -104, -93,  -80, -66, -51, -35, -18, -1,
+};
+
+static const int8_t kFallbackLowTick[] = {
+    17,  34,  50,  65,  79,  92,  103, 112, 119, 124,
+    127, 127, 126, 122, 116, 108, 98,  86,  73,  58,
+    42,  26,  9,   -8,  -25, -41, -57, -72, -85, -97,
+    -108, -116, -122, -126, -127, -127, -125, -120,
+    -113, -104, -93,  -80, -66, -51, -35, -18, -1,
+};
+
+struct FallbackPrimitive {
+    uint32_t id;
+    const int8_t* data;
+    uint32_t length;
+};
+
+static const FallbackPrimitive kFallbackPrimitives[] = {
+    { static_cast<uint32_t>(CompositePrimitive::NOOP),      kFallbackNoop,      sizeof(kFallbackNoop) },
+    { static_cast<uint32_t>(CompositePrimitive::CLICK),      kFallbackClick,     sizeof(kFallbackClick) },
+    { static_cast<uint32_t>(CompositePrimitive::THUD),       kFallbackThud,      sizeof(kFallbackThud) },
+    { static_cast<uint32_t>(CompositePrimitive::SPIN),       kFallbackSpin,      sizeof(kFallbackSpin) },
+    { static_cast<uint32_t>(CompositePrimitive::QUICK_RISE), kFallbackQuickRise, sizeof(kFallbackQuickRise) },
+    { static_cast<uint32_t>(CompositePrimitive::SLOW_RISE),  kFallbackSlowRise,  sizeof(kFallbackSlowRise) },
+    { static_cast<uint32_t>(CompositePrimitive::QUICK_FALL), kFallbackQuickFall, sizeof(kFallbackQuickFall) },
+    { static_cast<uint32_t>(CompositePrimitive::LIGHT_TICK), kFallbackLightTick, sizeof(kFallbackLightTick) },
+    { static_cast<uint32_t>(CompositePrimitive::LOW_TICK),   kFallbackLowTick,   sizeof(kFallbackLowTick) },
+};
 
 std::unique_ptr<effect_stream> readEffectStreamFromFile(uint32_t uniqueEffectId) {
     std::filesystem::path filePath;
@@ -109,7 +187,30 @@ const struct effect_stream* get_effect_stream(uint32_t effectId) {
         if (newEffectStream) {
             auto result = sEffectStreams.emplace(effectId, *newEffectStream);
             return &result.first->second;
-        } else if (effectId == (uint32_t)Effect::DOUBLE_CLICK) {
+        }
+
+        // If this is a primitive and the .bin file is missing, use hardcoded fallback
+        if ((effectId & kPrimitiveMask) != 0) {
+            uint32_t primitiveId = effectId & ~kPrimitiveMask;
+            for (const auto& fp : kFallbackPrimitives) {
+                if (fp.id == primitiveId) {
+                    LOG(INFO) << "Using hardcoded fallback for primitive " << primitiveId;
+                    auto result = sEffectStreams.emplace(
+                        effectId,
+                        effect_stream(fp.id, fp.length, 8000, fp.data));
+                    return &result.first->second;
+                }
+            }
+            LOG(WARNING) << "No fallback for primitive " << primitiveId << ", using NOOP";
+            uint32_t noopId = static_cast<uint32_t>(CompositePrimitive::NOOP) | kPrimitiveMask;
+            auto noopIt = sEffectStreams.find(noopId);
+            if (noopIt != sEffectStreams.end()) {
+                return &noopIt->second;
+            }
+            return get_effect_stream(noopId);
+        }
+
+        if (effectId == (uint32_t)Effect::DOUBLE_CLICK) {
             LOG(VERBOSE) << "Could not get double click effect, duplicating click effect";
             newEffectStream = duplicateEffect(get_effect_stream((uint32_t)Effect::CLICK),
                                               (uint32_t)Effect::DOUBLE_CLICK);
