@@ -45,12 +45,22 @@
 #include "effect.h"
 
 using aidl::android::hardware::vibrator::Effect;
-using aidl::android::hardware::vibrator::CompositePrimitive;
 
 namespace {
 
 const uint32_t kDefaultPlayRateHz = 24000;
 const uint16_t kPrimitiveMask = (1 << 15);
+
+// CompositePrimitive enum values (from android.hardware.vibrator AIDL)
+constexpr uint32_t kPrimitiveNoop = 0;
+constexpr uint32_t kPrimitiveClick = 1;
+constexpr uint32_t kPrimitiveThud = 2;
+constexpr uint32_t kPrimitiveSpin = 3;
+constexpr uint32_t kPrimitiveQuickRise = 4;
+constexpr uint32_t kPrimitiveSlowRise = 5;
+constexpr uint32_t kPrimitiveQuickFall = 6;
+constexpr uint32_t kPrimitiveLightTick = 7;
+constexpr uint32_t kPrimitiveLowTick = 8;
 
 std::unordered_map<uint32_t, effect_stream> sEffectStreams;
 std::unordered_map<uint32_t, std::vector<int8_t>> sEffectFifoData;
@@ -121,15 +131,15 @@ struct FallbackPrimitive {
 };
 
 static const FallbackPrimitive kFallbackPrimitives[] = {
-    { static_cast<uint32_t>(CompositePrimitive::NOOP),      kFallbackNoop,      sizeof(kFallbackNoop) },
-    { static_cast<uint32_t>(CompositePrimitive::CLICK),      kFallbackClick,     sizeof(kFallbackClick) },
-    { static_cast<uint32_t>(CompositePrimitive::THUD),       kFallbackThud,      sizeof(kFallbackThud) },
-    { static_cast<uint32_t>(CompositePrimitive::SPIN),       kFallbackSpin,      sizeof(kFallbackSpin) },
-    { static_cast<uint32_t>(CompositePrimitive::QUICK_RISE), kFallbackQuickRise, sizeof(kFallbackQuickRise) },
-    { static_cast<uint32_t>(CompositePrimitive::SLOW_RISE),  kFallbackSlowRise,  sizeof(kFallbackSlowRise) },
-    { static_cast<uint32_t>(CompositePrimitive::QUICK_FALL), kFallbackQuickFall, sizeof(kFallbackQuickFall) },
-    { static_cast<uint32_t>(CompositePrimitive::LIGHT_TICK), kFallbackLightTick, sizeof(kFallbackLightTick) },
-    { static_cast<uint32_t>(CompositePrimitive::LOW_TICK),   kFallbackLowTick,   sizeof(kFallbackLowTick) },
+    { kPrimitiveNoop,      kFallbackNoop,      sizeof(kFallbackNoop) },
+    { kPrimitiveClick,     kFallbackClick,     sizeof(kFallbackClick) },
+    { kPrimitiveThud,      kFallbackThud,      sizeof(kFallbackThud) },
+    { kPrimitiveSpin,      kFallbackSpin,      sizeof(kFallbackSpin) },
+    { kPrimitiveQuickRise, kFallbackQuickRise, sizeof(kFallbackQuickRise) },
+    { kPrimitiveSlowRise,  kFallbackSlowRise,  sizeof(kFallbackSlowRise) },
+    { kPrimitiveQuickFall, kFallbackQuickFall, sizeof(kFallbackQuickFall) },
+    { kPrimitiveLightTick, kFallbackLightTick, sizeof(kFallbackLightTick) },
+    { kPrimitiveLowTick,   kFallbackLowTick,   sizeof(kFallbackLowTick) },
 };
 
 std::unique_ptr<effect_stream> readEffectStreamFromFile(uint32_t uniqueEffectId) {
@@ -202,7 +212,7 @@ const struct effect_stream* get_effect_stream(uint32_t effectId) {
                 }
             }
             LOG(WARNING) << "No fallback for primitive " << primitiveId << ", using NOOP";
-            uint32_t noopId = static_cast<uint32_t>(CompositePrimitive::NOOP) | kPrimitiveMask;
+            uint32_t noopId = kPrimitiveNoop | kPrimitiveMask;
             auto noopIt = sEffectStreams.find(noopId);
             if (noopIt != sEffectStreams.end()) {
                 return &noopIt->second;
