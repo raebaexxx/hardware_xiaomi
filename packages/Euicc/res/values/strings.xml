@@ -10,11 +10,9 @@
                 {
                     \"devices\": [
                         \"XIG05\",
-                        \"diting\",
                         \"fuxi\",
                         \"garnet\",
-                        \"nuwa\",
-                        \"ziyi\"
+                        \"nuwa\"
                     ],
                     \"esim-slot-ids\": [
                         1
@@ -32,11 +30,9 @@
                 {
                     \"devices\": [
                         \"XIG05\",
-                        \"diting\",
                         \"fuxi\",
                         \"garnet\",
-                        \"nuwa\",
-                        \"ziyi\"
+                        \"nuwa\"
                     ],
                     \"illustration_lottie\": \"sim_illustration_lottie_bottom\"
                 }
