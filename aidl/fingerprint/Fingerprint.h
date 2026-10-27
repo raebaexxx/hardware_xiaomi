@@ -41,9 +41,9 @@ class Fingerprint : public BnFingerprint {
     LockoutTracker mLockoutTracker;
     FingerprintSensorType mSensorType;
 
-    fingerprint_device_t* mDevice;
-    UdfpsHandlerFactory* mUdfpsHandlerFactory;
-    UdfpsHandler* mUdfpsHandler;
+    fingerprint_device_t* mDevice = nullptr;
+    UdfpsHandlerFactory* mUdfpsHandlerFactory = nullptr;
+    UdfpsHandler* mUdfpsHandler = nullptr;
 };
 
 }  // namespace aidl::android::hardware::biometrics::fingerprint

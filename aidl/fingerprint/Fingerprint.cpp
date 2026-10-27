@@ -210,6 +210,12 @@ void Fingerprint::notify(const fingerprint_msg_t* msg) {
 }
 
 ndk::ScopedAStatus Fingerprint::getSensorProps(std::vector<SensorProps>* out) {
+    if (!mDevice) {
+        ALOGE("Fingerprint HAL unavailable; not registering a sensor");
+        out->clear();
+        return ndk::ScopedAStatus::ok();
+    }
+
     std::vector<common::ComponentInfo> componentInfo = {
             {HW_COMPONENT_ID, HW_VERSION, FW_VERSION, SERIAL_NUMBER, "" /* softwareVersion */},
             {SW_COMPONENT_ID, "" /* hardwareVersion */, "" /* firmwareVersion */,
@@ -242,6 +248,11 @@ ndk::ScopedAStatus Fingerprint::getSensorProps(std::vector<SensorProps>* out) {
 ndk::ScopedAStatus Fingerprint::createSession(int32_t /*sensorId*/, int32_t userId,
                                               const std::shared_ptr<ISessionCallback>& cb,
                                               std::shared_ptr<ISession>* out) {
+    if (!mDevice) {
+        ALOGE("Cannot create a session without a fingerprint HAL");
+        return ndk::ScopedAStatus::fromStatus(STATUS_DEAD_OBJECT);
+    }
+
     CHECK(mSession == nullptr || mSession->isClosed()) << "Open session already exists!";
 
     mSession = SharedRefBase::make<Session>(mDevice, mUdfpsHandler, userId, cb, mLockoutTracker);
